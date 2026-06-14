@@ -3,14 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Go</title>
+  <title>rhombify</title>
   <style>
-    :root {
-      --cell: 36px;
-      --margin: 36px;
-      --board: calc(6 * var(--cell) + 2 * var(--margin));
-    }
-
     html, body {
       height: 100%;
       margin: 0;
@@ -20,55 +14,46 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #f8f8f6;
+      background: #ffffff;
       font-family: Georgia, "Times New Roman", serif;
     }
 
     #board {
       position: relative;
-      width: var(--board);
-      height: var(--board);
-      background: #f8f8f6;
+      background: #ffffff;
+      transform: rotate(-30deg);
     }
 
-    .line {
-      position: absolute;
-      background: #4a3a22;
+    .cell {
+      fill: #ffffff;
+      stroke: #080808;
+      stroke-width: 1.5;
     }
-    .line.h {
-      left: var(--margin);
-      width: calc(6 * var(--cell));
-      height: 1px;
+    .edge {
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
-    .line.v {
-      top: var(--margin);
-      width: 1px;
-      height: calc(6 * var(--cell));
+    .edge.red {
+      stroke: #b12525;
     }
-
-    .star {
-      position: absolute;
-      width: 6px;
-      height: 6px;
-      margin: -3px 0 0 -3px;
-      border-radius: 50%;
-      background: #4a3a22;
+    .edge.blue {
+      stroke: #3963ad;
     }
 
     .stone {
       position: absolute;
-      width: calc(var(--cell) * 0.9);
-      height: calc(var(--cell) * 0.9);
-      margin: calc(var(--cell) * -0.45) 0 0 calc(var(--cell) * -0.45);
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
+      transform: translate(-50%, -50%);
       pointer-events: none;
     }
-    .stone.black {
-      background: radial-gradient(circle at 35% 30%, #5a5a5a, #2b2b2b 70%);
+    .stone.red {
+      background: radial-gradient(circle at 35% 30%, #d35b5b, #b12525 70%);
     }
-    .stone.white {
-      background: radial-gradient(circle at 35% 30%, #ffffff, #f0f0f0 70%);
-      border: 1px solid #cfcabd;
+    .stone.blue {
+      background: radial-gradient(circle at 35% 30%, #6f97d6, #3963ad 70%);
     }
   </style>
 </head>
