@@ -1,10 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>rhombify</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go</title>
+  <style>
+    :root {
+      --cell: 36px;
+      --margin: 36px;
+      --board: calc(6 * var(--cell) + 2 * var(--margin));
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f8f6;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    #board {
+      position: relative;
+      width: var(--board);
+      height: var(--board);
+      background: #f8f8f6;
+    }
+
+    .line {
+      position: absolute;
+      background: #4a3a22;
+    }
+    .line.h {
+      left: var(--margin);
+      width: calc(6 * var(--cell));
+      height: 1px;
+    }
+    .line.v {
+      top: var(--margin);
+      width: 1px;
+      height: calc(6 * var(--cell));
+    }
+
+    .star {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      margin: -3px 0 0 -3px;
+      border-radius: 50%;
+      background: #4a3a22;
+    }
+
+    .stone {
+      position: absolute;
+      width: calc(var(--cell) * 0.9);
+      height: calc(var(--cell) * 0.9);
+      margin: calc(var(--cell) * -0.45) 0 0 calc(var(--cell) * -0.45);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .stone.black {
+      background: radial-gradient(circle at 35% 30%, #5a5a5a, #2b2b2b 70%);
+    }
+    .stone.white {
+      background: radial-gradient(circle at 35% 30%, #ffffff, #f0f0f0 70%);
+      border: 1px solid #cfcabd;
+    }
+  </style>
 </head>
 <body>
-  Is this thing on? Yes.
+  <div id="board"></div>
+
+  <script type="module">
+    import { stones, nextColor, place } from './board.js';
+    import { chooseMove } from './strategies.js';
+
+    // Game loop: two players, each picking a move via the current strategy,
+    // one stone every 3 seconds. First stone 3 seconds after load.
+    function step() {
+      const idx = chooseMove(stones, nextColor);
+      if (idx === null) return; // board full
+
+      place(idx);
+      setTimeout(step, 3000);
+    }
+
+    setTimeout(step, 3000);
+  </script>
 </body>
 </html>
