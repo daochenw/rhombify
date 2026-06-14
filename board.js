@@ -106,3 +106,9 @@ export function place(idx) {
 
   nextColor = nextColor === 'red' ? 'blue' : 'red';
 }
+
+export function reset() {
+  stones.fill(null);
+  board.querySelectorAll('.stone').forEach(stone => stone.remove());
+  nextColor = 'red';
+}

@@ -10,6 +10,10 @@
       margin: 0;
     }
 
+    :root {
+      --hud-margin: 100px;
+    }
+
     body {
       display: flex;
       align-items: center;
@@ -26,6 +30,49 @@
       background: #ffffff;
     }
 
+    #iteration {
+      position: fixed;
+      top: var(--hud-margin);
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: "Latin Modern Roman", "Computer Modern Serif", "CMU Serif", "STIX Two Text", "Times New Roman", serif;
+      font-size: 20px;
+      color: #080808;
+      white-space: nowrap;
+    }
+
+    #speed {
+      position: fixed;
+      bottom: var(--hud-margin);
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: "Latin Modern Roman", "Computer Modern Serif", "CMU Serif", "STIX Two Text", "Times New Roman", serif;
+      font-size: 20px;
+      color: #080808;
+      white-space: nowrap;
+    }
+
+    #speed button {
+      padding: 2px 1px;
+      border: 0;
+      border-bottom: 1px solid transparent;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    #speed button.active {
+      border-bottom-color: #080808;
+    }
+
+    .times {
+      font-size: 0.8em;
+    }
+
     .cell {
       fill: #ffffff;
       stroke: #080808;
@@ -37,10 +84,10 @@
       stroke-linejoin: round;
     }
     .edge.red {
-      stroke: #b12525;
+      stroke: #c55c5c;
     }
     .edge.blue {
-      stroke: #3963ad;
+      stroke: #6b8ac2;
     }
 
     .stone {
@@ -52,31 +99,97 @@
       pointer-events: none;
     }
     .stone.red {
-      background: radial-gradient(circle at 35% 30%, #d35b5b, #b12525 70%);
+      background: radial-gradient(circle at 35% 30%, #de8484, #c55c5c 70%);
     }
     .stone.blue {
-      background: radial-gradient(circle at 35% 30%, #6f97d6, #3963ad 70%);
+      background: radial-gradient(circle at 35% 30%, #93b1e0, #6b8ac2 70%);
     }
   </style>
 </head>
 <body>
+  <div id="iteration">Games completed: 0</div>
+  <div id="speed">
+    <span>Speed setting:</span>
+    <button type="button" data-speed="0.5" aria-pressed="false">0.5<span class="times">×</span></button>
+    <button type="button" data-speed="1" class="active" aria-pressed="true">1<span class="times">×</span></button>
+    <button type="button" data-speed="1.5" aria-pressed="false">1.5<span class="times">×</span></button>
+  </div>
   <div id="board"></div>
 
   <script type="module">
-    import { stones, nextColor, place } from './board.js';
-    import { chooseMove } from './strategies.js';
+    import { stones, nextColor, place, reset } from './board.js';
+    import { chooseMove, reward } from './strategies.js';
 
-    // Game loop: two players, each picking a move via the current strategy,
-    // one stone every 3 seconds. First stone 3 seconds after load.
+    const baseWait = 150;
+    const iteration = document.getElementById('iteration');
+    const speedButtons = document.querySelectorAll('#speed button');
+    let game = 0;
+    let speed = 1;
+
+    function wait() {
+      return baseWait / speed;
+    }
+
+    speedButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        speed = Number(button.dataset.speed);
+        speedButtons.forEach(b => {
+          b.classList.toggle('active', b === button);
+          b.setAttribute('aria-pressed', b === button);
+        });
+      });
+    });
+
+    function won(color) {
+      const n = Math.sqrt(stones.length);
+      const stack = [];
+      const seen = new Set();
+      for (let i = 0; i < n; i++) {
+        const idx = color === 'red' ? i : i * n;
+        if (stones[idx] === color) stack.push(idx);
+      }
+
+      while (stack.length) {
+        const idx = stack.pop();
+        if (seen.has(idx)) continue;
+        seen.add(idx);
+
+        const row = Math.floor(idx / n);
+        const col = idx % n;
+        if (color === 'red' ? row === n - 1 : col === n - 1) return true;
+
+        for (const [dr, dc] of [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0]]) {
+          const r = row + dr;
+          const c = col + dc;
+          const next = r * n + c;
+          if (r >= 0 && r < n && c >= 0 && c < n && stones[next] === color) stack.push(next);
+        }
+      }
+      return false;
+    }
+
+    // Game loop: two players, each picking a move via the current strategy.
     function step() {
-      const idx = chooseMove(stones, nextColor);
+      const color = nextColor;
+      const idx = chooseMove(stones, color);
       if (idx === null) return; // board full
 
       place(idx);
-      setTimeout(step, 3000);
+      if (won(color)) {
+        reward(color);
+        setTimeout(() => {
+          game++;
+          iteration.textContent = 'Games completed: ' + game;
+          reset();
+          setTimeout(step, wait());
+        }, wait());
+        return;
+      }
+
+      setTimeout(step, wait());
     }
 
-    setTimeout(step, 3000);
+    setTimeout(step, wait());
   </script>
 </body>
 </html>
