@@ -79,18 +79,8 @@ for (let row = 0; row < SIZE; row++) {
   }
 }
 
-// Keep the fixed -30deg orientation but scale so the whole board fits the
-// viewport (capped at 1 so it never grows past natural size).
-function fit() {
-  const m = 16;
-  const rad = 30 * Math.PI / 180;
-  const bw = boardW * Math.cos(rad) + boardH * Math.sin(rad);
-  const bh = boardW * Math.sin(rad) + boardH * Math.cos(rad);
-  const scale = Math.min(1, (window.innerWidth - m) / bw, (window.innerHeight - m) / bh);
-  board.style.transform = 'translate(-50%, -50%) rotate(-30deg) scale(' + scale + ')';
-}
-fit();
-window.addEventListener('resize', fit);
+// The page owns the shared layout scale so the board and HUD shrink together.
+board.style.transform = 'translate(-50%, -50%) rotate(-30deg) scale(var(--layout-scale))';
 
 export function place(idx) {
   if (stones[idx]) return; // occupied

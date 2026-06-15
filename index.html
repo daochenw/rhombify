@@ -12,6 +12,7 @@
 
     :root {
       --hud-margin: 100px;
+      --layout-scale: 1;
     }
 
     body {
@@ -27,25 +28,36 @@
       position: absolute;
       top: 50%;
       left: 50%;
+      z-index: 0;
       background: #ffffff;
     }
 
     #iteration {
       position: fixed;
-      top: var(--hud-margin);
+      top: calc(var(--hud-margin) * var(--layout-scale));
       left: 50%;
-      transform: translateX(-50%);
+      z-index: 1;
+      transform: translateX(-50%) scale(var(--layout-scale));
+      transform-origin: top center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
       font-family: "Latin Modern Roman", "Computer Modern Serif", "CMU Serif", "STIX Two Text", "Times New Roman", serif;
-      font-size: 20px;
+      font-size: 30px;
+      line-height: 1;
+      text-align: center;
       color: #080808;
       white-space: nowrap;
     }
 
     #controls {
       position: fixed;
-      bottom: var(--hud-margin);
+      bottom: calc(var(--hud-margin) * var(--layout-scale));
       left: 50%;
-      transform: translateX(-50%);
+      z-index: 1;
+      transform: translateX(-50%) scale(var(--layout-scale));
+      transform-origin: bottom center;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -56,8 +68,8 @@
     }
 
     #pause {
-      width: 34px;
-      height: 34px;
+      width: 40px;
+      height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -68,8 +80,8 @@
     }
 
     #pause span {
-      width: 4px;
-      height: 20px;
+      width: 6px;
+      height: 30px;
       border-radius: 999px;
       background: #080808;
     }
@@ -82,7 +94,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 20px;
+      font-size: 30px;
     }
 
     #speed button {
@@ -137,7 +149,10 @@
   </style>
 </head>
 <body>
-  <div id="iteration">Games completed: 0</div>
+  <div id="iteration">
+    <span>Games completed</span>
+    <span id="game-count">0</span>
+  </div>
   <div id="controls">
     <button id="pause" type="button" aria-label="Pause play" aria-pressed="false" title="Pause">
       <span></span>
@@ -156,17 +171,52 @@
     import { chooseMove, reward } from './strategies.js';
 
     const baseWait = 150;
+    const root = document.documentElement;
+    const board = document.getElementById('board');
     const iteration = document.getElementById('iteration');
+    const controls = document.getElementById('controls');
+    const gameCount = document.getElementById('game-count');
     const pauseButton = document.getElementById('pause');
     const speedButtons = document.querySelectorAll('#speed button');
+    const layoutPad = 16;
+    const layoutGap = 64;
     let game = 0;
     let speed = 1;
     let paused = false;
     let timer = null;
     let queued = null;
+    let layoutFrame = null;
 
     function wait() {
       return baseWait / speed;
+    }
+
+    function fitLayout() {
+      root.style.setProperty('--layout-scale', 1);
+
+      const boardRect = board.getBoundingClientRect();
+      const iterationRect = iteration.getBoundingClientRect();
+      const controlsRect = controls.getBoundingClientRect();
+      const topHudExtent = iterationRect.bottom;
+      const bottomHudExtent = window.innerHeight - controlsRect.top;
+      const requiredWidth = Math.max(boardRect.width, iterationRect.width, controlsRect.width);
+      const requiredHeight = boardRect.height + 2 * Math.max(topHudExtent, bottomHudExtent);
+      const scale = Math.min(
+        1,
+        Math.max(1, window.innerWidth - layoutPad * 2) / requiredWidth,
+        Math.max(1, window.innerHeight - layoutGap * 2) / requiredHeight
+      );
+
+      root.style.setProperty('--layout-scale', scale);
+    }
+
+    function queueFitLayout() {
+      if (layoutFrame !== null) return;
+
+      layoutFrame = requestAnimationFrame(() => {
+        layoutFrame = null;
+        fitLayout();
+      });
     }
 
     function schedule(fn) {
@@ -246,7 +296,8 @@
         reward(color);
         schedule(() => {
           game++;
-          iteration.textContent = 'Games completed: ' + game;
+          gameCount.textContent = game;
+          fitLayout();
           reset();
           schedule(step);
         });
@@ -256,6 +307,9 @@
       schedule(step);
     }
 
+    fitLayout();
+    window.addEventListener('resize', queueFitLayout);
+    document.fonts?.ready.then(fitLayout);
     schedule(step);
   </script>
 </body>
