@@ -41,18 +41,48 @@
       white-space: nowrap;
     }
 
-    #speed {
+    #controls {
       position: fixed;
       bottom: var(--hud-margin);
       left: 50%;
       transform: translateX(-50%);
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 16px;
       font-family: "Latin Modern Roman", "Computer Modern Serif", "CMU Serif", "STIX Two Text", "Times New Roman", serif;
-      font-size: 20px;
       color: #080808;
       white-space: nowrap;
+    }
+
+    #pause {
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    #pause span {
+      width: 4px;
+      height: 20px;
+      border-radius: 999px;
+      background: #080808;
+    }
+
+    #pause.paused {
+      opacity: 0.45;
+    }
+
+    #speed {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
     }
 
     #speed button {
@@ -108,11 +138,16 @@
 </head>
 <body>
   <div id="iteration">Games completed: 0</div>
-  <div id="speed">
-    <span>Speed setting:</span>
-    <button type="button" data-speed="0.5" aria-pressed="false">0.5<span class="times">×</span></button>
-    <button type="button" data-speed="1" class="active" aria-pressed="true">1<span class="times">×</span></button>
-    <button type="button" data-speed="1.5" aria-pressed="false">1.5<span class="times">×</span></button>
+  <div id="controls">
+    <button id="pause" type="button" aria-label="Pause play" aria-pressed="false" title="Pause">
+      <span></span>
+      <span></span>
+    </button>
+    <div id="speed">
+      <button type="button" data-speed="0.5" aria-pressed="false">0.5<span class="times">×</span></button>
+      <button type="button" data-speed="1" class="active" aria-pressed="true">1<span class="times">×</span></button>
+      <button type="button" data-speed="1.5" aria-pressed="false">1.5<span class="times">×</span></button>
+    </div>
   </div>
   <div id="board"></div>
 
@@ -122,13 +157,45 @@
 
     const baseWait = 150;
     const iteration = document.getElementById('iteration');
+    const pauseButton = document.getElementById('pause');
     const speedButtons = document.querySelectorAll('#speed button');
     let game = 0;
     let speed = 1;
+    let paused = false;
+    let timer = null;
+    let queued = null;
 
     function wait() {
       return baseWait / speed;
     }
+
+    function schedule(fn) {
+      queued = fn;
+      clearTimeout(timer);
+      timer = null;
+      if (!paused) {
+        timer = setTimeout(() => {
+          const next = queued;
+          queued = null;
+          next();
+        }, wait());
+      }
+    }
+
+    pauseButton.addEventListener('click', () => {
+      paused = !paused;
+      pauseButton.classList.toggle('paused', paused);
+      pauseButton.setAttribute('aria-pressed', paused);
+      pauseButton.setAttribute('aria-label', paused ? 'Resume play' : 'Pause play');
+      pauseButton.title = paused ? 'Resume' : 'Pause';
+
+      if (paused) {
+        clearTimeout(timer);
+        timer = null;
+      } else {
+        schedule(queued || step);
+      }
+    });
 
     speedButtons.forEach(button => {
       button.addEventListener('click', () => {
@@ -177,19 +244,19 @@
       place(idx);
       if (won(color)) {
         reward(color);
-        setTimeout(() => {
+        schedule(() => {
           game++;
           iteration.textContent = 'Games completed: ' + game;
           reset();
-          setTimeout(step, wait());
-        }, wait());
+          schedule(step);
+        });
         return;
       }
 
-      setTimeout(step, wait());
+      schedule(step);
     }
 
-    setTimeout(step, wait());
+    schedule(step);
   </script>
 </body>
 </html>
