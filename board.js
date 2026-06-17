@@ -97,6 +97,7 @@ export function place(idx) {
   const c = centers[idx];
   const stone = document.createElement('div');
   stone.className = 'stone ' + nextColor;
+  stone.dataset.idx = idx;
   stone.style.left = c.x + 'px';
   stone.style.top = c.y + 'px';
   board.appendChild(stone);
@@ -150,6 +151,11 @@ export function showWinningLine(path, color) {
   for (const { v, i, j } of perimeterEdges) {
     drawWinningEdge(v, i, j, `winning-edge ${color}`);
   }
+
+  // Fade every stone outside the winning chain so the path reads by contrast.
+  board.querySelectorAll('.stone').forEach(stone => {
+    if (!pathCells.has(Number(stone.dataset.idx))) stone.classList.add('dimmed');
+  });
 }
 
 export function reset() {
