@@ -36,6 +36,13 @@ svg.setAttribute('width', boardW);
 svg.setAttribute('height', boardH);
 board.appendChild(svg);
 
+const winningLineOverlay = document.createElementNS(SVG_NS, 'svg');
+winningLineOverlay.setAttribute('width', boardW);
+winningLineOverlay.setAttribute('height', boardH);
+winningLineOverlay.setAttribute('viewBox', `0 0 ${boardW} ${boardH}`);
+winningLineOverlay.setAttribute('class', 'winning-line-overlay');
+board.appendChild(winningLineOverlay);
+
 // Six vertices of a pointy-top hexagon centered at (cx, cy):
 // 0 top, 1 upper-right, 2 lower-right, 3 bottom, 4 lower-left, 5 upper-left.
 function verts(cx, cy) {
@@ -97,8 +104,57 @@ export function place(idx) {
   nextColor = nextColor === 'red' ? 'blue' : 'red';
 }
 
+const hexEdges = [
+  { vertices: [0, 1], neighbor: [-1, 1] },
+  { vertices: [1, 2], neighbor: [0, 1] },
+  { vertices: [2, 3], neighbor: [1, 0] },
+  { vertices: [3, 4], neighbor: [1, -1] },
+  { vertices: [4, 5], neighbor: [0, -1] },
+  { vertices: [5, 0], neighbor: [-1, 0] },
+];
+
+function drawWinningEdge(v, i, j, cls) {
+  const line = document.createElementNS(SVG_NS, 'line');
+  line.setAttribute('x1', v[i].x);
+  line.setAttribute('y1', v[i].y);
+  line.setAttribute('x2', v[j].x);
+  line.setAttribute('y2', v[j].y);
+  line.setAttribute('class', cls);
+  winningLineOverlay.appendChild(line);
+}
+
+export function showWinningLine(path, color) {
+  winningLineOverlay.replaceChildren();
+  const pathCells = new Set(path);
+  const perimeterEdges = [];
+
+  for (const idx of path) {
+    const row = Math.floor(idx / SIZE);
+    const col = idx % SIZE;
+    const v = verts(centers[idx].x, centers[idx].y);
+
+    for (const { vertices, neighbor } of hexEdges) {
+      const neighborRow = row + neighbor[0];
+      const neighborCol = col + neighbor[1];
+      const neighborIdx = neighborRow * SIZE + neighborCol;
+      const neighborInBoard =
+        neighborRow >= 0 && neighborRow < SIZE &&
+        neighborCol >= 0 && neighborCol < SIZE;
+      if (neighborInBoard && pathCells.has(neighborIdx)) continue;
+
+      const [i, j] = vertices;
+      perimeterEdges.push({ v, i, j });
+    }
+  }
+
+  for (const { v, i, j } of perimeterEdges) {
+    drawWinningEdge(v, i, j, `winning-edge ${color}`);
+  }
+}
+
 export function reset() {
   stones.fill(null);
   board.querySelectorAll('.stone').forEach(stone => stone.remove());
+  winningLineOverlay.replaceChildren();
   nextColor = 'red';
 }

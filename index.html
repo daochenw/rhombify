@@ -134,6 +134,7 @@
 
     .stone {
       position: absolute;
+      z-index: 1;
       width: 38px;
       height: 38px;
       border-radius: 50%;
@@ -146,11 +147,33 @@
     .stone.blue {
       background: radial-gradient(circle at 35% 30%, #93b1e0, #6b8ac2 70%);
     }
+
+    .winning-line-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .winning-edge {
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 5;
+    }
+
+    .winning-edge.red {
+      stroke: #c55c5c;
+    }
+
+    .winning-edge.blue {
+      stroke: #6b8ac2;
+    }
   </style>
 </head>
 <body>
   <div id="iteration">
-    <span>Games completed</span>
+    <span>Cycle</span>
     <span id="game-count">0</span>
   </div>
   <div id="controls">
@@ -167,10 +190,11 @@
   <div id="board"></div>
 
   <script type="module">
-    import { stones, nextColor, place, reset } from './board.js';
+    import { stones, nextColor, place, reset, showWinningLine } from './board.js';
     import { chooseMove, reward } from './strategies.js';
 
     const baseWait = 150;
+    const winDisplayWait = 3000;
     const root = document.documentElement;
     const board = document.getElementById('board');
     const iteration = document.getElementById('iteration');
@@ -185,6 +209,9 @@
     let paused = false;
     let timer = null;
     let queued = null;
+    let queuedDelay = 0;
+    let timerDelay = 0;
+    let timerStartedAt = 0;
     let layoutFrame = null;
 
     function wait() {
@@ -219,16 +246,27 @@
       });
     }
 
-    function schedule(fn) {
+    function runQueued() {
+      timer = null;
+      const next = queued;
+      queued = null;
+      queuedDelay = 0;
+      if (next) next();
+    }
+
+    function startTimer() {
+      timerDelay = queuedDelay;
+      timerStartedAt = performance.now();
+      timer = setTimeout(runQueued, timerDelay);
+    }
+
+    function schedule(fn, delay = wait()) {
       queued = fn;
+      queuedDelay = delay;
       clearTimeout(timer);
       timer = null;
       if (!paused) {
-        timer = setTimeout(() => {
-          const next = queued;
-          queued = null;
-          next();
-        }, wait());
+        startTimer();
       }
     }
 
@@ -240,10 +278,13 @@
       pauseButton.title = paused ? 'Resume' : 'Pause';
 
       if (paused) {
+        if (timer !== null) {
+          queuedDelay = Math.max(0, timerDelay - (performance.now() - timerStartedAt));
+        }
         clearTimeout(timer);
         timer = null;
       } else {
-        schedule(queued || step);
+        schedule(queued || step, queued ? queuedDelay : wait());
       }
     });
 
@@ -257,13 +298,17 @@
       });
     });
 
-    function won(color) {
+    function winningPath(color) {
       const n = Math.sqrt(stones.length);
       const stack = [];
       const seen = new Set();
+      const parent = new Map();
       for (let i = 0; i < n; i++) {
         const idx = color === 'red' ? i : i * n;
-        if (stones[idx] === color) stack.push(idx);
+        if (stones[idx] === color) {
+          stack.push(idx);
+          parent.set(idx, null);
+        }
       }
 
       while (stack.length) {
@@ -273,16 +318,27 @@
 
         const row = Math.floor(idx / n);
         const col = idx % n;
-        if (color === 'red' ? row === n - 1 : col === n - 1) return true;
+        if (color === 'red' ? row === n - 1 : col === n - 1) {
+          const path = [];
+          let cursor = idx;
+          while (cursor !== null) {
+            path.push(cursor);
+            cursor = parent.get(cursor);
+          }
+          return path.reverse();
+        }
 
         for (const [dr, dc] of [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0]]) {
           const r = row + dr;
           const c = col + dc;
           const next = r * n + c;
-          if (r >= 0 && r < n && c >= 0 && c < n && stones[next] === color) stack.push(next);
+          if (r >= 0 && r < n && c >= 0 && c < n && stones[next] === color && !parent.has(next)) {
+            parent.set(next, idx);
+            stack.push(next);
+          }
         }
       }
-      return false;
+      return null;
     }
 
     // Game loop: two players, each picking a move via the current strategy.
@@ -292,15 +348,17 @@
       if (idx === null) return; // board full
 
       place(idx);
-      if (won(color)) {
+      const path = winningPath(color);
+      if (path) {
+        showWinningLine(path, color);
         reward(color);
+        game++;
+        gameCount.textContent = game;
+        fitLayout();
         schedule(() => {
-          game++;
-          gameCount.textContent = game;
-          fitLayout();
           reset();
           schedule(step);
-        });
+        }, winDisplayWait);
         return;
       }
 
