@@ -195,7 +195,7 @@
 
   <script type="module">
     import { stones, nextColor, place, reset, showWinningLine } from './board.js';
-    import { chooseMove, reward } from './strategies.js';
+    import { chooseMove, reward, loadNet } from './neural.js';
 
     const baseWait = 150;
     const winDisplayWait = 3000;
@@ -372,7 +372,7 @@
     fitLayout();
     window.addEventListener('resize', queueFitLayout);
     document.fonts?.ready.then(fitLayout);
-    schedule(step);
+    loadNet().then(() => schedule(step)); // start once the trained net is loaded
   </script>
 </body>
 </html>
