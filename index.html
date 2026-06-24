@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>rhombify</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <style>
     html, body {
       height: 100%;
@@ -34,7 +35,7 @@
 
     #iteration {
       position: fixed;
-      top: calc(var(--hud-margin) * var(--layout-scale));
+      top: calc(var(--hud-margin) * var(--layout-scale) + 20px);
       left: 50%;
       z-index: 1;
       transform: translateX(-50%) scale(var(--layout-scale));
@@ -49,6 +50,22 @@
       text-align: center;
       color: #080808;
       white-space: nowrap;
+    }
+
+    #score {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      column-gap: 0.3em;
+    }
+
+    #red-score {
+      text-align: right;
+      color: #c55c5c;
+    }
+
+    #blue-score {
+      text-align: left;
+      color: #6b8ac2;
     }
 
     #controls {
@@ -177,13 +194,13 @@
 </head>
 <body>
   <div id="iteration">
-    <span>Games completed</span>
-    <span id="game-count">0</span>
+    <span>Score</span>
+    <span id="score"><span id="red-score">0</span><span class="colon">:</span><span id="blue-score">0</span></span>
   </div>
   <div id="controls">
     <button id="pause" type="button" aria-label="Pause play" aria-pressed="false" title="Pause">
       <span></span>
-      <span></span>
+      <span></span> 
     </button>
     <div id="speed">
       <button type="button" data-speed="0.5" aria-pressed="false">0.5<span class="times">×</span></button>
@@ -203,12 +220,13 @@
     const board = document.getElementById('board');
     const iteration = document.getElementById('iteration');
     const controls = document.getElementById('controls');
-    const gameCount = document.getElementById('game-count');
+    const redScore = document.getElementById('red-score');
+    const blueScore = document.getElementById('blue-score');
     const pauseButton = document.getElementById('pause');
     const speedButtons = document.querySelectorAll('#speed button');
     const layoutPad = 16;
     const layoutGap = 64;
-    let game = 0;
+    const scores = { red: 0, blue: 0 };
     let speed = 1;
     let paused = false;
     let timer = null;
@@ -356,8 +374,9 @@
       if (path) {
         showWinningLine(path, color);
         reward(color);
-        game++;
-        gameCount.textContent = game;
+        scores[color]++;
+        redScore.textContent = scores.red;
+        blueScore.textContent = scores.blue;
         fitLayout();
         schedule(() => {
           reset();
